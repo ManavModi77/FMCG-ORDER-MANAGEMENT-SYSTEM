@@ -29,13 +29,18 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // ✅ FIX: Explicit CORS config — allows GET, POST, PUT, DELETE from React dev server
-    // Without this bean, .cors(Customizer.withDefaults()) has nothing to work with
-    // and silently blocks PUT/DELETE requests from the frontend.
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:3000"));
+
+        // ✅ UPDATE: Allow both local testing AND your future Vercel URL
+        // Using setAllowedOriginPatterns allows Vercel's preview links to work too
+        config.setAllowedOriginPatterns(List.of(
+                "http://localhost:3000",
+                "http://localhost:5173", // For Vite
+                "https://*.vercel.app"    // This covers your Vercel deployment automatically
+        ));
+
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
@@ -48,11 +53,12 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .cors(Customizer.withDefaults()) // Now picks up the bean above
+                .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/users/distributors").permitAll() // ✅ FIX: needed on Register page before login
+                        .requestMatchers("/api/users/distributors").permitAll()
+                        .requestMatchers("/error").permitAll() // ✅ ADDED: Prevents 403 on system errors
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
