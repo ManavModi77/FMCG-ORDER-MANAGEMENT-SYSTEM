@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/products")
@@ -33,118 +34,86 @@ public class ProductController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Long distributorId
     ) {
-        boolean hasCategory = category != null && !category.isEmpty() && !category.equalsIgnoreCase("All");
-        boolean hasSearch   = search   != null && !search.trim().isEmpty();
+        // ✅ FIX: Safely check for null BEFORE calling methods on the strings
+        boolean hasCategory = category != null && !category.trim().isEmpty() && !category.equalsIgnoreCase("All");
+        boolean hasSearch = search != null && !search.trim().isEmpty();
 
-        List<Product> products;
-        if (hasCategory && hasSearch)
-            products = productRepository.findByNameContainingIgnoreCaseAndCategory(search.trim(), category);
-        else if (hasSearch)
-            products = productRepository.findByNameContainingIgnoreCase(search.trim());
-        else if (hasCategory)
-            products = productRepository.findByCategory(category);
-        else
-            products = productRepository.findAll();
+        List<Product> baseProducts;
 
-        return products.stream().map(p -> {
+        if (hasCategory && hasSearch) {
+            baseProducts = productRepository.findByNameContainingIgnoreCaseAndCategory(search, category);
+        } else if (hasCategory) {
+            baseProducts = productRepository.findByCategory(category);
+        } else if (hasSearch) {
+            baseProducts = productRepository.findByNameContainingIgnoreCase(search);
+        } else {
+            baseProducts = productRepository.findAll();
+        }
+
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        for (Product product : baseProducts) {
             Map<String, Object> dto = new HashMap<>();
-            dto.put("id",       p.getId());
-            dto.put("name",     p.getName());
-            dto.put("category", p.getCategory());
-            dto.put("price",    p.getPrice());
-            dto.put("image",    p.getImage());
+            dto.put("id", product.getId());
+            dto.put("name", product.getName());
+            dto.put("category", product.getCategory());
+            dto.put("price", product.getPrice());
+            dto.put("image", product.getImage());
 
+            int stock = 0;
+            // If distributor ID is passed, fetch their specific stock for this product
             if (distributorId != null) {
-                int stock = inventoryRepository
-                        .findByDistributorIdAndProductId(distributorId, p.getId())
+                stock = inventoryRepository.findByDistributorIdAndProductId(distributorId, product.getId())
                         .map(DistributorInventory::getStock)
                         .orElse(0);
-                dto.put("stock", stock);
-            } else {
-                dto.put("stock", 0);
             }
-            return dto;
-        }).toList();
+            dto.put("stock", stock);
+            result.add(dto);
+        }
+
+        return result;
     }
 
-    // ── POST /api/products  (Admin only) ────────────────────────────────────
-    // Creates product master record + seeds a zero-stock inventory row
-    // for every existing distributor automatically.
+    // ── POST /api/products ──────────────────────────────────────────────────
+    // Admin adds a new product. We also seed a blank stock row for all distributors.
     @PostMapping
     public ResponseEntity<?> addProduct(@RequestBody Product product) {
-        if (product.getName() == null || product.getName().isBlank())
-            return ResponseEntity.badRequest().body(Map.of("error", "Product name is required."));
-        if (product.getPrice() == null || product.getPrice() < 0)
-            return ResponseEntity.badRequest().body(Map.of("error", "A valid price is required."));
+        Product savedProduct = productRepository.save(product);
 
-        product.setStock(0);
-        Product saved = productRepository.save(product);
+        // Fetch all existing distributors
+        List<User> distributors = userRepository.findByRole("distributor"); // ensure matches DB case
 
-        // Auto-seed zero stock for every existing distributor
-        List<User> distributors = userRepository.findByRole("DISTRIBUTOR");
-        List<DistributorInventory> seedRows = new ArrayList<>();
-        for (User dist : distributors) {
+        // Create a 0-stock inventory record for every distributor for this new product
+        for (User distributor : distributors) {
             DistributorInventory inv = new DistributorInventory();
-            inv.setDistributorId(dist.getId());
-            inv.setProduct(saved);
+            inv.setDistributorId(distributor.getId());
+            inv.setProduct(savedProduct);
             inv.setStock(0);
-            seedRows.add(inv);
+            inventoryRepository.save(inv);
         }
-        inventoryRepository.saveAll(seedRows);
 
-        return ResponseEntity.ok(saved);
+        return ResponseEntity.ok(savedProduct);
     }
 
-    // ── PUT /api/products/{id}/stock?distributorId=X ────────────────────────
-    // Updates stock only for the requesting distributor — others unaffected.
-    @PutMapping("/{id}/stock")
-    public ResponseEntity<?> updateStock(
-            @PathVariable Long id,
-            @RequestParam Long distributorId,
-            @RequestBody Map<String, Integer> body
-    ) {
-        Integer newStock = body.get("stock");
-        if (newStock == null || newStock < 0)
-            return ResponseEntity.badRequest().body(Map.of("error", "Stock value must be 0 or greater."));
-
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
-
-        DistributorInventory inv = inventoryRepository
-                .findByDistributorIdAndProductId(distributorId, id)
-                .orElseGet(() -> {
-                    DistributorInventory newInv = new DistributorInventory();
-                    newInv.setDistributorId(distributorId);
-                    newInv.setProduct(product);
-                    newInv.setStock(0);
-                    return newInv;
-                });
-
-        inv.setStock(newStock);
-        inventoryRepository.save(inv);
-
-        return ResponseEntity.ok(Map.of("message", "Stock updated.", "stock", newStock));
-    }
-
-    // ── GET /api/products/inventory?distributorId=X ─────────────────────────
-    // Used by StockManagement.jsx — returns all products with THIS distributor's stock.
-    @GetMapping("/inventory")
-    public ResponseEntity<?> getDistributorInventory(@RequestParam Long distributorId) {
-        List<DistributorInventory> rows = inventoryRepository.findByDistributorId(distributorId);
-
-        // New distributor with no rows yet → auto-seed from all products
-        if (rows.isEmpty()) {
-            List<Product> allProducts = productRepository.findAll();
-            List<DistributorInventory> seeded = new ArrayList<>();
-            for (Product p : allProducts) {
-                DistributorInventory inv = new DistributorInventory();
-                inv.setDistributorId(distributorId);
-                inv.setProduct(p);
-                inv.setStock(0);
-                seeded.add(inv);
+    // ── GET /api/products/inventory/{distributorId} ─────────────────────────
+    // Fetch all products with the specific stock owned by this distributor
+    @GetMapping("/inventory/{distributorId}")
+    public ResponseEntity<List<Map<String, Object>>> getInventory(@PathVariable Long distributorId) {
+        
+        // Safety check to ensure all products are seeded for this distributor
+        List<Product> allProducts = productRepository.findAll();
+        for (Product product : allProducts) {
+            Optional<DistributorInventory> existing = inventoryRepository.findByDistributorIdAndProductId(distributorId, product.getId());
+            if (existing.isEmpty()) {
+                DistributorInventory seeded = new DistributorInventory();
+                seeded.setDistributorId(distributorId);
+                seeded.setProduct(product);
+                seeded.setStock(0);
+                inventoryRepository.save(seeded);
             }
-            rows = inventoryRepository.saveAll(seeded);
         }
+
+        List<DistributorInventory> rows = inventoryRepository.findByDistributorId(distributorId);
 
         List<Map<String, Object>> result = rows.stream().map(inv -> {
             Map<String, Object> dto = new HashMap<>();
@@ -158,6 +127,25 @@ public class ProductController {
         }).toList();
 
         return ResponseEntity.ok(result);
+    }
+
+    // ── PUT /api/products/{productId}/stock?distributorId=X ─────────────────
+    // Distributor updates their own stock for a product
+    @PutMapping("/{productId}/stock")
+    public ResponseEntity<?> updateStock(
+            @PathVariable Long productId,
+            @RequestParam Long distributorId,
+            @RequestBody Map<String, Integer> payload) {
+            
+        int addedStock = payload.getOrDefault("stock", 0);
+        
+        DistributorInventory inv = inventoryRepository.findByDistributorIdAndProductId(distributorId, productId)
+                .orElseThrow(() -> new RuntimeException("Inventory record not found"));
+                
+        inv.setStock(inv.getStock() + addedStock);
+        inventoryRepository.save(inv);
+        
+        return ResponseEntity.ok(Map.of("message", "Stock updated successfully", "newStock", inv.getStock()));
     }
 
     // ── GET /api/products/low-stock?distributorId=X ─────────────────────────
