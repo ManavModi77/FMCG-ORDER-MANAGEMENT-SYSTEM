@@ -1,8 +1,8 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { LogOut, Store, Package, ShoppingCart, Boxes, CheckCircle, XCircle, AlertTriangle, X, Shield, Users } from 'lucide-react';
+import { LogOut, Store, Package, Boxes, CheckCircle, XCircle, AlertTriangle, X, Users, TrendingUp } from 'lucide-react';
 
 const TOAST_STYLES = {
     success: { background: '#f0fdf4', border: '1px solid #86efac', color: '#166534', icon: <CheckCircle size={18} color="#16a34a" /> },
@@ -12,80 +12,85 @@ const TOAST_STYLES = {
 
 const Navbar = () => {
     const { user, logout } = useAuth();
-    const { toasts, removeToast } = useCart();
+    const { toasts, removeToast} = useCart();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const handleLogout = () => {
         logout();
         navigate('/login');
     };
 
+    // Calculate total items in cart (sum of quantities)
+    //const cartItemCount = cart.reduce((total, item) => total + item.count, 0);
+
     return (
         <>
             <nav className="navbar glass">
                 <div className="container nav-container">
+                    {/* Brand Logo */}
                     <Link to="/" className="nav-brand">
-                        <Package className="h-6 w-6" />
+                        <Package size={24} style={{ marginRight: '0.5rem' }} />
                         FMCG Connect
                     </Link>
 
-                    {user && (
-                        <div className="nav-links">
-                            {/* ── Shop Owner links ── */}
-                            {user.role === 'shop_owner' && (
-                                <>
-                                    <Link to="/shop" className="nav-link flex-center" style={{ gap: '0.25rem' }}>
-                                        <Store size={18} /> Catalog
-                                    </Link>
-                                    <Link to="/shop/orders" className="nav-link flex-center" style={{ gap: '0.25rem' }}>
-                                        <ShoppingCart size={18} /> My Orders
-                                    </Link>
-                                </>
-                            )}
+                    {/* Navigation Links based on User Role */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                        
+                        {/* ── Admin Links ── */}
+                        {user?.role === 'admin' && (
+                            <>
+                                <Link to="/admin?tab=products" className="nav-link" style={{ color: location.search.includes('tab=products') || !location.search ? 'hsl(var(--primary))' : '' }}>
+                                    <Package size={18} /> Products
+                                </Link>
+                                <Link to="/admin?tab=network" className="nav-link" style={{ color: location.search.includes('tab=network') ? 'hsl(var(--primary))' : '' }}>
+                                    <Users size={18} /> Network
+                                </Link>
+                                <Link to="/admin?tab=revenue" className="nav-link" style={{ color: location.search.includes('tab=revenue') ? 'hsl(var(--primary))' : '' }}>
+                                    <TrendingUp size={18} /> Revenue
+                                </Link>
+                            </>
+                        )}
 
-                            {/* ── Distributor links ── */}
-                            {user.role === 'distributor' && (
-                                <>
-                                    <Link to="/distributor"         className="nav-link">Dashboard</Link>
-                                    <Link to="/distributor/pending" className="nav-link">Pending Orders</Link>
-                                    <Link to="/distributor/history" className="nav-link">History</Link>
-                                    <Link to="/distributor/shops"   className="nav-link">My Shops</Link>
-                                    <Link to="/distributor/stock"   className="nav-link flex-center" style={{ gap: '0.25rem' }}>
-                                        <Boxes size={18} /> Stock
-                                    </Link>
-                                </>
-                            )}
+                        {/* ── Distributor Links ── */}
+                        {user?.role === 'distributor' && (
+                            <>
+                                <Link to="/distributor" className="nav-link"><Store size={18} /> Dashboard</Link>
+                                <Link to="/distributor/pending" className="nav-link"><CheckCircle size={18} /> Pending</Link>
+                                <Link to="/distributor/stock" className="nav-link"><Boxes size={18} /> Stock</Link>
+                                <Link to="/distributor/history" className="nav-link"><Package size={18} /> History</Link>
+                                <Link to="/distributor/shops" className="nav-link"><Users size={18} /> Shops</Link>
+                            </>
+                        )}
 
-                            {/* ── Admin links ── */}
-                            {user.role === 'admin' && (
-                                <>
-                                    <Link to="/admin" className="nav-link flex-center" style={{ gap: '0.25rem' }}>
-                                        <Package size={18} /> Products
-                                    </Link>
-                                    <Link to="/admin" className="nav-link flex-center" style={{ gap: '0.25rem' }}>
-                                        <Users size={18} /> Network
-                                    </Link>
-                                </>
-                            )}
+                        {/* ── Shop Owner Links ── */}
+                        {user?.role === 'shop_owner' && (
+                            <>
+                                <Link to="/" className="nav-link"><Store size={18} /> Shop</Link>
+                                <Link to="/shop/orders" className="nav-link"><Package size={18} /> Orders</Link>
+                            </>
+                        )}
 
-                            <div style={{ marginLeft: '1rem', paddingLeft: '1rem', borderLeft: '1px solid var(--text-muted)' }} className="flex-center">
-                                <span style={{ fontSize: '0.875rem', fontWeight: 600, marginRight: '1rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                                    {user.role === 'admin' && <Shield size={14} color="hsl(var(--primary))" />}
-                                    {user.name} ({user.role === 'distributor' ? 'Distributor' : user.role === 'admin' ? 'Admin' : 'Shop'})
-                                </span>
-                                <button onClick={handleLogout} className="btn btn-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}>
-                                    <LogOut size={16} /> Logout
+                        {/* ── User Profile & Logout ── */}
+                        {user && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderLeft: '1px solid #ddd', paddingLeft: '1.5rem', marginLeft: '0.5rem' }}>
+                                <div style={{ textAlign: 'right' }}>
+                                    <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{user.name}</div>
+                                    <div style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))', textTransform: 'uppercase' }}>{user.role.replace('_', ' ')}</div>
+                                </div>
+                                <button onClick={handleLogout} className="btn btn-secondary" style={{ padding: '0.5rem' }} title="Logout">
+                                    <LogOut size={18} />
                                 </button>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
             </nav>
 
-            {/* Toast container */}
+            {/* Global Toast Notifications rendering over everything */}
             {toasts.length > 0 && (
                 <div style={{
-                    position: 'fixed', bottom: '1.5rem', right: '1.5rem',
+                    position: 'fixed', bottom: '20px', right: '20px', 
                     zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '0.75rem'
                 }}>
                     {toasts.map(t => {
