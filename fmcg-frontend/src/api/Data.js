@@ -62,7 +62,7 @@ export const getProducts = async (category = null, search = null, distributorId 
 
 // Stock management page — returns all products with THIS distributor's stock
 export const getDistributorInventory = async (distributorId) => {
-    const response = await apiClient.get(`/products/inventory?distributorId=${distributorId}`);
+    const response = await apiClient.get(`/products/inventory/${distributorId}`);
     return response.data;
 };
 
