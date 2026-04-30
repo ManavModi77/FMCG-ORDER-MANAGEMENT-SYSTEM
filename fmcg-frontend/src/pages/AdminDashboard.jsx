@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { getDistributors, getShopsByDistributor, getOrdersByDistributor } from '../api/Data';
 import { useCart } from '../context/CartContext';
-import { Package, Store, Plus, ChevronDown, ChevronRight, X, Users, TrendingUp } from 'lucide-react';
+import { Package, Store, Plus, ChevronDown, ChevronRight, Users, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const CATEGORIES = ['Biscuits', 'Chocolates', 'Wafers'];
@@ -64,6 +65,10 @@ const AddProductPanel = ({ onProductAdded }) => {
                     <label className="input-label">Price (₹)</label>
                     <input type="number" name="price" min="1" className="input-field" value={form.price} onChange={handleChange} required placeholder="e.g., 20" />
                 </div>
+                <div className="input-group">
+                    <label className="input-label">Image URL</label>
+                    <input type="text" name="image" className="input-field" value={form.image} onChange={handleChange} placeholder="e.g., https://example.com/image.jpg" />
+                </div>
                 <button type="submit" className="btn btn-primary" disabled={saving}>
                     {saving ? 'Adding...' : 'Add Product'}
                 </button>
@@ -78,7 +83,6 @@ const CatalogPanel = () => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // ✅ FIX APPLIED HERE: Wrapped fetchProducts in useCallback
     const fetchProducts = useCallback(() => {
         setLoading(true);
         const userStr = localStorage.getItem('currentUser');
@@ -91,10 +95,7 @@ const CatalogPanel = () => {
             .catch(() => { toast.error('Failed to load products'); setLoading(false); });
     }, [toast]);
 
-    // ✅ FIX APPLIED HERE: Added fetchProducts to the dependency array
-    useEffect(() => { 
-        fetchProducts(); 
-    }, [fetchProducts]);
+    useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
     if (loading) return <div className="flex-center" style={{ minHeight: '200px' }}>Loading catalog...</div>;
 
@@ -111,7 +112,6 @@ const CatalogPanel = () => {
                             <th style={{ padding: '1rem', textAlign: 'left', color: 'hsl(var(--text-muted))' }}>Name</th>
                             <th style={{ padding: '1rem', textAlign: 'left', color: 'hsl(var(--text-muted))' }}>Category</th>
                             <th style={{ padding: '1rem', textAlign: 'right', color: 'hsl(var(--text-muted))' }}>Price</th>
-                            <th style={{ padding: '1rem', textAlign: 'center', color: 'hsl(var(--text-muted))' }}>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -123,11 +123,6 @@ const CatalogPanel = () => {
                                     <span className="badge badge-primary">{p.category}</span>
                                 </td>
                                 <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 700 }}>₹{p.price}</td>
-                                <td style={{ padding: '1rem', textAlign: 'center' }}>
-                                    <button className="btn btn-secondary" style={{ padding: '0.4rem', color: '#dc2626', background: '#fef2f2' }} onClick={() => toast.warning('Delete feature pending API support')}>
-                                        <X size={16} />
-                                    </button>
-                                </td>
                             </tr>
                         ))}
                     </tbody>
@@ -218,8 +213,7 @@ const DistributorShopsPanel = () => {
     );
 };
 
-
-// ── NEW: Admin Revenue Graph Panel ──────────────────────────────────────────
+// ── Admin Revenue Graph Panel ──────────────────────────────────────────
 const AdminRevenueGraphPanel = () => {
     const [chartData, setChartData] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -228,31 +222,20 @@ const AdminRevenueGraphPanel = () => {
     useEffect(() => {
         const fetchAllRevenues = async () => {
             try {
-                // 1. Get all distributors
                 const dists = await getDistributors();
-                
-                // 2. Fetch confirmed orders for each distributor
                 const revenues = await Promise.all(
                     dists.map(async (dist) => {
                         try {
                             const orders = await getOrdersByDistributor(dist.id, 'CONFIRMED');
                             const distTotal = orders.reduce((sum, o) => sum + o.total, 0);
-                            return {
-                                name: dist.name,
-                                Revenue: distTotal
-                            };
+                            return { name: dist.name, Revenue: distTotal };
                         } catch (err) {
                             return { name: dist.name, Revenue: 0 };
                         }
                     })
                 );
-
-                // 3. Set the data!
                 const total = revenues.reduce((sum, r) => sum + r.Revenue, 0);
-                
-                // Sort by highest revenue
-                revenues.sort((a, b) => b.Revenue - a.Revenue);
-
+                revenues.sort((b) => b.Revenue - revenues[0].Revenue);
                 setChartData(revenues);
                 setTotalPlatformRevenue(total);
             } catch (error) {
@@ -261,7 +244,6 @@ const AdminRevenueGraphPanel = () => {
                 setLoading(false);
             }
         };
-
         fetchAllRevenues();
     }, []);
 
@@ -273,7 +255,6 @@ const AdminRevenueGraphPanel = () => {
                 <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
                     <TrendingUp size={20} color="hsl(var(--primary))" /> Distributor Revenue Comparison
                 </h3>
-                
                 <div style={{ textAlign: 'right' }}>
                     <p style={{ color: 'hsl(var(--text-muted))', margin: 0, fontSize: '0.9rem' }}>Total Platform Revenue</p>
                     <h3 style={{ margin: '0.25rem 0 0 0', fontSize: '1.75rem', color: 'hsl(var(--primary))' }}>
@@ -281,7 +262,6 @@ const AdminRevenueGraphPanel = () => {
                     </h3>
                 </div>
             </div>
-
             {chartData.length === 0 || totalPlatformRevenue === 0 ? (
                 <div className="flex-center" style={{ height: '300px', color: 'hsl(var(--text-muted))' }}>
                     No revenue data generated yet.
@@ -326,10 +306,11 @@ const AdminRevenueGraphPanel = () => {
     );
 };
 
-
 // ── Main Dashboard Component ────────────────────────────────────────────────
 const AdminDashboard = () => {
-    const [activeTab, setActiveTab] = useState('products');
+    // Uses URL parameters so browser back/forward buttons work
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = searchParams.get('tab') || 'products';
 
     const tabs = [
         { id: 'products', label: 'Products', icon: <Package size={18} /> },
@@ -342,13 +323,11 @@ const AdminDashboard = () => {
             <div style={{ marginBottom: '2rem' }}>
                 <h2>Admin Dashboard</h2>
             </div>
-
-            {/* Custom Tabs */}
             <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid #eee', marginBottom: '2rem', overflowX: 'auto' }}>
                 {tabs.map(tab => (
                     <button
                         key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
+                        onClick={() => setSearchParams({ tab: tab.id })}
                         style={{
                             padding: '0.75rem 1.5rem',
                             background: 'none', border: 'none', cursor: 'pointer',
@@ -364,8 +343,7 @@ const AdminDashboard = () => {
                     </button>
                 ))}
             </div>
-
-            {/* Tab Content */}
+            
             {activeTab === 'products' && (
                 <div className="animate-fade-in">
                     <AddProductPanel />
