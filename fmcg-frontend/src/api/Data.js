@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8080/api';
+// This looks for a Vercel variable first; if it doesn't find one, it uses localhost
+const API_URL = import.meta.env.VITE_API_URL 
+                ? `${import.meta.env.VITE_API_URL}/api` 
+                : 'http://localhost:8080/api';
 
 const apiClient = axios.create({ baseURL: API_URL });
 
