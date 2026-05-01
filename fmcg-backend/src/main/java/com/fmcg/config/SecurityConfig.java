@@ -33,12 +33,12 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // ✅ UPDATE: Allow both local testing AND your future Vercel URL
-        // Using setAllowedOriginPatterns allows Vercel's preview links to work too
+        // ✅ UPDATED: Added your specific Render URL to the allowed list
         config.setAllowedOriginPatterns(List.of(
                 "http://localhost:3000",
-                "http://localhost:5173", // For Vite
-                "https://*.vercel.app"    // This covers your Vercel deployment automatically
+                "http://localhost:5173",
+                "https://fmcg-frontend-j2j1.onrender.com", // Your Render URL
+                "https://*.vercel.app"                      // Keeping this just in case
         ));
 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
@@ -58,7 +58,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/users/distributors").permitAll()
-                        .requestMatchers("/error").permitAll() // ✅ ADDED: Prevents 403 on system errors
+                        .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
