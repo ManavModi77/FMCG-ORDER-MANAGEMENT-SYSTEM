@@ -21,23 +21,21 @@ const Navbar = () => {
         navigate('/login');
     };
 
-    // Calculate total items in cart (sum of quantities)
-    //const cartItemCount = cart.reduce((total, item) => total + item.count, 0);
 
     return (
         <>
             <nav className="navbar glass">
                 <div className="container nav-container">
-                    {/* Brand Logo */}
+                    
                     <Link to="/" className="nav-brand">
                         <Package size={24} style={{ marginRight: '0.5rem' }} />
                         FMCG Connect
                     </Link>
 
-                    {/* Navigation Links based on User Role */}
+                   
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                         
-                        {/* ── Admin Links ── */}
+                       
                         {user?.role === 'admin' && (
                             <>
                                 <Link to="/admin?tab=products" className="nav-link" style={{ color: location.search.includes('tab=products') || !location.search ? 'hsl(var(--primary))' : '' }}>
@@ -52,7 +50,6 @@ const Navbar = () => {
                             </>
                         )}
 
-                        {/* ── Distributor Links ── */}
                         {user?.role === 'distributor' && (
                             <>
                                 <Link to="/distributor" className="nav-link"><Store size={18} /> Dashboard</Link>
@@ -63,7 +60,7 @@ const Navbar = () => {
                             </>
                         )}
 
-                        {/* ── Shop Owner Links ── */}
+  
                         {user?.role === 'shop_owner' && (
                             <>
                                 <Link to="/" className="nav-link"><Store size={18} /> Shop</Link>
@@ -71,7 +68,7 @@ const Navbar = () => {
                             </>
                         )}
 
-                        {/* ── User Profile & Logout ── */}
+                       
                         {user && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderLeft: '1px solid #ddd', paddingLeft: '1.5rem', marginLeft: '0.5rem' }}>
                                 <div style={{ textAlign: 'right' }}>
@@ -87,7 +84,7 @@ const Navbar = () => {
                 </div>
             </nav>
 
-            {/* Global Toast Notifications rendering over everything */}
+         
             {toasts.length > 0 && (
                 <div style={{
                     position: 'fixed', bottom: '20px', right: '20px', 
