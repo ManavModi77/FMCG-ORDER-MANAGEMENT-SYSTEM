@@ -19,7 +19,7 @@ public class UserController {
 
     @GetMapping("/distributors")
     public List<Map<String, Object>> getDistributors() {
-        // BUG FIX: Map to safe response — never expose the hashed password field
+        
         return userRepository.findByRole("DISTRIBUTOR")
                 .stream()
                 .map(this::toSafeResponse)
@@ -28,14 +28,14 @@ public class UserController {
 
     @GetMapping("/shops/{distributorId}")
     public List<Map<String, Object>> getShopsByDistributor(@PathVariable Long distributorId) {
-        // BUG FIX: Same safe mapping applied here
+        
         return userRepository.findByDistributorId(distributorId)
                 .stream()
                 .map(this::toSafeResponse)
                 .collect(Collectors.toList());
     }
 
-    // ✅ FIXED: Returns only safe fields — password is intentionally excluded
+    
     private Map<String, Object> toSafeResponse(User user) {
         Map<String, Object> safe = new HashMap<>();
         safe.put("id", user.getId());
