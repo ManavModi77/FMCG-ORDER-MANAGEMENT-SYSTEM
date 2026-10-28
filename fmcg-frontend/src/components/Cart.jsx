@@ -14,7 +14,6 @@ const Cart = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    // This function now runs AFTER Stripe successfully charges the fake card
     const saveOrderToDatabase = async (transactionId) => {
         setLoading(true);
          try {
@@ -22,8 +21,8 @@ const Cart = () => {
             id: item.product.id,
             quantity: item.count,
             price: item.product.price,
-            quantityType: item.quantityType, // Send the type (e.g., box_60)
-            label: item.label                // Send the text (e.g., 1 Box (60 pcs))
+            quantityType: item.quantityType, 
+            label: item.label                
             }));
             
             const payload = {
@@ -122,7 +121,7 @@ const Cart = () => {
                                     Processing Order... Please wait.
                                 </div>
                             ) : (
-                                /* --- THE NEW STRIPE BUTTON --- */
+                                
                                 <StripeCheckout
                                     name="FMCG Connect" 
                                     description={`Your total is ₹${total}`}
@@ -146,7 +145,7 @@ const Cart = () => {
                 </div>
             )}
 
-            {/* Backdrop overlay */}
+           
             {isOpen && (
                 <div
                     style={{ position: 'fixed', top: 0, left: 0, right: '400px', bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 99 }}
