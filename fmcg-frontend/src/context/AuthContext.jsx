@@ -10,8 +10,7 @@ export const AuthProvider = ({ children }) => {
     });
 
     const login = async (email, password) => {
-        // api.login() already throws with the server's error message on non-2xx.
-        // AuthContext just stores what comes back — role is already lowercase from the server.
+ 
         const userData = await api.login(email, password);
         setUser(userData);
         localStorage.setItem('currentUser', JSON.stringify(userData));
