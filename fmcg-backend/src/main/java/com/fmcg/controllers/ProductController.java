@@ -34,7 +34,7 @@ public class ProductController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Long distributorId
     ) {
-        // ✅ FIX: Safely check for null BEFORE calling methods on the strings
+       
         boolean hasCategory = category != null && !category.trim().isEmpty() && !category.equalsIgnoreCase("All");
         boolean hasSearch = search != null && !search.trim().isEmpty();
 
