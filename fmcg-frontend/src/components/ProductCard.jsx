@@ -30,7 +30,6 @@ const ProductCard = ({ product }) => {
 
     const options = getPurchaseOptions();
 
-    // Ensure a default selection is made
     useEffect(() => {
         if (!selectedType && options.length > 0) {
             setSelectedType(options[0].type);
@@ -40,7 +39,6 @@ const ProductCard = ({ product }) => {
     const handleAddToCart = () => {
         const selectedOption = options.find(opt => opt.type === selectedType) || options[0];
         
-        // Use custom quantity for chocolate if 'custom' is selected
         let finalOption = { ...selectedOption };
         if (product.category === 'Chocolates' && selectedType === 'custom') {
             const qty = Math.max(3, customQty);
@@ -74,7 +72,6 @@ const ProductCard = ({ product }) => {
                     <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'hsl(var(--primary))' }}>
                         ₹{product.price} <span style={{ fontSize: '0.875rem', fontWeight: 400 }}>/ unit</span>
                     </div>
-                    {/* ✅ NEW: Stock indicator */}
                     <div style={{ marginTop: '0.4rem' }}>
                         {product.stock === 0 ? (
                             <span style={{ fontSize: '0.78rem', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '9999px', background: '#fee2e2', color: '#991b1b' }}>
@@ -120,7 +117,6 @@ const ProductCard = ({ product }) => {
                 </div>
             </div>
 
-            {/* ✅ Disabled when out of stock */}
             <button
                 onClick={handleAddToCart}
                 className="btn btn-primary"
