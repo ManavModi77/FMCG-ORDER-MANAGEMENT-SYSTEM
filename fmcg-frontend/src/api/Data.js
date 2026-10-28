@@ -1,14 +1,11 @@
 import axios from 'axios';
 
-// This looks for a Vercel variable first; if it doesn't find one, it uses localhost
-// Hard-code the URL directly to stop the localhost fallback
 const API_URL = process.env.REACT_APP_API_URL 
                 ? `${process.env.REACT_APP_API_URL}/api` 
                 : 'http://localhost:8080/api';
 
 const apiClient = axios.create({ baseURL: API_URL });
 
-// Attach JWT token to every request
 apiClient.interceptors.request.use((config) => {
     const userStr = localStorage.getItem('currentUser');
     if (userStr) {
@@ -18,7 +15,6 @@ apiClient.interceptors.request.use((config) => {
     return config;
 });
 
-// Surface server error messages as err.message
 apiClient.interceptors.response.use(
     (response) => response,
     (error) => {
@@ -53,7 +49,6 @@ export const registerShopOwner = async (shopData) => {
 // PRODUCTS
 // ==========================================
 
-// Shop catalog — always pass distributorId so the shop sees THEIR distributor's stock
 export const getProducts = async (category = null, search = null, distributorId = null) => {
     const params = new URLSearchParams();
     if (category && category !== 'All') params.append('category', category);
@@ -64,13 +59,12 @@ export const getProducts = async (category = null, search = null, distributorId 
     return response.data;
 };
 
-// Stock management page — returns all products with THIS distributor's stock
+
 export const getDistributorInventory = async (distributorId) => {
     const response = await apiClient.get(`/products/inventory/${distributorId}`);
     return response.data;
 };
 
-// Admin: all products (no stock context needed)
 export const getAllProducts = async () => {
     const response = await apiClient.get('/products');
     return response.data;
@@ -136,7 +130,7 @@ export const cancelOrder = async (orderId) => {
     return response.data;
 };
 
-// Stock update — must pass distributorId so only that distributor's row is updated
+
 export const updateProductStock = async (productId, stock, distributorId) => {
     const response = await apiClient.put(
         `/products/${productId}/stock?distributorId=${distributorId}`,
