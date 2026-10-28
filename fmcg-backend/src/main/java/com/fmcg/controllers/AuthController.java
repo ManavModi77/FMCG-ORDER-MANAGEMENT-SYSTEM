@@ -39,7 +39,6 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@RequestBody Map<String, String> loginRequest) {
 
-        // ✅ FIX 1: Return 401 JSON instead of throwing RuntimeException (which gives a 500)
         Optional<User> userOpt = userRepository.findByEmail(loginRequest.get("email"));
         if (userOpt.isEmpty()) {
             return ResponseEntity.status(401).body(Map.of("error", "Invalid email or password."));
@@ -51,9 +50,6 @@ public class AuthController {
             return ResponseEntity.status(401).body(Map.of("error", "Invalid email or password."));
         }
 
-        // ✅ FIX 2: Normalize role to lowercase BEFORE putting in token AND response.
-        // This ensures admin/distributor/shop_owner all work consistently on the frontend
-        // regardless of how the role was stored in the DB (ADMIN, admin, Admin — all work).
         String normalizedRole = user.getRole().toLowerCase();
 
         String token = jwtUtil.generateToken(user.getEmail(), normalizedRole, user.getId());
@@ -63,7 +59,7 @@ public class AuthController {
         response.put("id", user.getId());
         response.put("name", user.getName());
         response.put("email", user.getEmail());
-        response.put("role", normalizedRole);          // always lowercase
+        response.put("role", normalizedRole);          
         response.put("distributorId", user.getDistributorId());
 
         return ResponseEntity.ok(response);
